@@ -1,0 +1,12 @@
+version: '2'
+
+services:
+  django-app:
+    build:
+      dockerfile: ./Dockerfile
+    volumes:
+      - ./pr11:/usr/src/app
+    command: python manage.py runserver 0.0.0.0:8000
+    ports:
+      - "0.0.0.0:8000:8000"
+

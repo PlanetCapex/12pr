@@ -1,0 +1,79 @@
+version: '2'
+
+services:
+  app:
+    image: 'docker-spring-boot-postgres:latest'
+    build:
+      context: .
+    container_name: mainapp
+    depends_on:
+      - database
+      - fileservice
+      - rabbitmq
+    environment:
+      - POSTGRES_URL=jdbc:postgresql://db:5432/digitalbookmark
+      - POSTGRES_USER=digitalbookmark
+      - POSTGRES_PASS=postgrePass
+      - RABBITMQ_HOST=rabbitmq
+      - RABBITMQ_PORT=5672
+      - RABBITMQ_USERNAME=guest
+      - RABBITMQ_PASSWORD=guest
+    ports:
+      - "8080:8080"
+
+  analytics:
+    build:
+      dockerfile: ./analytics/Dockerfile
+    container_name: analytics
+    volumes:
+      - ./analytics:/usr/src/app
+    command: python manage.py runserver 0.0.0.0:8000
+    ports:
+      - "0.0.0.0:8000:8000"
+    environment:
+      - MAINHOST=http://mainapp:8080
+
+  fileservice:
+    build:
+      context: fileService
+    ports:
+      - "4200:4200"
+    depends_on:
+      - mongo
+      - rabbitmq
+    environment:
+      - APP_PORT=4200
+      - MONGODB_URL=mongodb://mongo:27017
+      - RABBITMQ_HOST=rabbitmq
+      - RABBITMQ_PORT=5672
+      - RABBITMQ_USERNAME=guest
+      - RABBITMQ_PASSWORD=guest
+
+  rabbitmq:
+    image: rabbitmq:3.13-rc-management
+    container_name: rabbitmq
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+
+  nginx:
+    image: nginx:latest
+    ports:
+      - "80:80"
+    volumes:
+      - ./nginx.conf:/etc/nginx/conf.d/default.conf
+    depends_on:
+      - app
+
+  database:
+    image: 'postgres:15.1-alpine'
+    container_name: database
+    environment:
+      - POSTGRES_USER=digitalbookmark
+      - POSTGRES_PASSWORD=postgrePass
+      - POSTGRES_DB=digitalbookmark
+
+  mongo:
+    image: mongo:latest
+    ports:
+      - "27017:27017"
